@@ -2,26 +2,25 @@
 #define lval_h
 
 // Lisp Value struct
-typedef struct
+typedef struct lval
 {
     int type;
     long num;
-    int err;
+
+    char *err;
+    char *sym;
+
+    int count;
+    struct lval **cell;
 } lval;
 
 // Enumeration of posibble Lisp Value types
 enum
 {
+    LVAL_ERR,
     LVAL_NUM,
-    LVAL_ERR
-};
-
-// Enumeration of posibble error types of Lisp Value
-enum
-{
-    LERR_BAD_OP,
-    LERR_BAD_NUM,
-    LERR_DIV_ZERO,
+    LVAL_SYM,
+    LVAL_SEXPR,
 };
 
 lval lval_err(int x);
