@@ -40,22 +40,24 @@ int main(int argc, char **argv)
 {
     // Create some Parsers
     mpc_parser_t *Number = mpc_new("number");
-    mpc_parser_t *Operator = mpc_new("operator");
+    mpc_parser_t *Symbol = mpc_new("symbol");
+    mpc_parser_t *Sexpr = mpc_new("sexpr");
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
     char *language =
         "                                                                                           \
             number      : /-?[0-9]+/ ;                                                              \
-            operator    : '+' | '-' | '*' | '/' | '^' | '%' | \"max\" | \"min\" ;                   \
-            expr        : <number> | '(' <operator> <expr>+ ')' ;                                   \
-            lispy       : /^/ <operator> <expr>+ /$/ ;                                              \
+            symbol      : '+' | '-' | '*' | '/' | '^' | '%' | \"max\" | \"min\" ;                   \
+            sexpr       : '(' <sexpr>* ')' ;                                                        \
+            expr        : <number> | <symbo> | <sexpr> ;                                            \
+            lispy       : /^/ <expr>+ /$/ ;                                                         \
         ";
 
     // Define them with the following Language
     mpca_lang(MPCA_LANG_DEFAULT,
               language,
-              Number, Operator, Expr, Lispy);
+              Number, Symbol, Sexpr, Expr, Lispy);
 
     // Print Version and Exit Information
     puts("Lispy Version 0.0.1");
@@ -90,7 +92,7 @@ int main(int argc, char **argv)
     }
 
     // Undefine and delete Parsers
-    mpc_cleanup(4, Number, Operator, Expr, Lispy);
+    mpc_cleanup(4, Number, Symbol, Sexpr, Expr, Lispy);
 
     fflush(stdout);
     return 0;
