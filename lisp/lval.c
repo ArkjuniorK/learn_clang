@@ -1,24 +1,72 @@
 #include <stdio.h>
+#include <string.h>
 #include "lval.h"
 
-// Create number lval type
-lval lval_num(long x)
+// Construct number lval type
+lval *lval_num(long x)
 {
-    lval v;
-    v.num = x;
-    v.type = LVAL_NUM;
-
+    lval *v = malloc(sizeof(lval));
+    v->type = LVAL_NUM;
+    v->num = x;
     return v;
 }
 
-// Create error lval type
-lval lval_err(int x)
+// Construct error lval type
+lval *lval_err(char *m)
 {
-    lval v;
-    v.err = x;
-    v.type = LVAL_ERR;
-
+    lval *v = malloc(sizeof(lval));
+    v->type = LVAL_ERR;
+    v->err = malloc(strlen(m) + 1);
+    strcpy(v->err, m);
     return v;
+}
+
+// Construct symbol lval type
+lval *lval_sym(char *s)
+{
+    lval *v = malloc(sizeof(lval));
+    v->type = LVAL_SYM;
+    v->sym = malloc(strlen(s) + 1);
+    strcpy(v->sym, s);
+    return v;
+}
+
+// Construct sexpr lval type
+lval *lval_sexpr(void)
+{
+    lval *v = malloc(sizeof(lval));
+    v->type = LVAL_SEXPR;
+    v->cell = NULL;
+    v->count = 0;
+    return v;
+}
+
+// Delete lval from memory
+void lval_del(lval *v)
+{
+    switch (v->type)
+    {
+    case LVAL_NUM:
+        break;
+
+    case LVAL_ERR:
+        free(v->err);
+        break;
+    case LVAL_SYM:
+        free(v->sym);
+        break;
+
+    // Free the children first then release the root
+    case LVAL_SEXPR:
+        for (int i = 0; i < v->count; i++)
+        {
+            lval_del(v->cell[i]);
+        }
+
+        free(v->cell);
+    }
+
+    free(v);
 }
 
 // Print the `lval`
