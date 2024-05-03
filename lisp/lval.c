@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "mpc.h"
 #include "lval.h"
 
 // Construct number lval type
@@ -41,6 +42,58 @@ lval *lval_sexpr(void)
     return v;
 }
 
+// Increase lval counter and append the given lval it to cell
+lval *lval_add(lval *v, lval *x)
+{
+    v->count++;
+    v->cell = realloc(v->cell, sizeof(lval *) * v->count);
+    v->cell[v->count - 1] = x;
+    return v;
+}
+
+// Read number type content and construct
+lval *lval_read_num(mpc_ast_t *t)
+{
+    errno = 0;
+    long n = strtol(t->contents, NULL, 0);
+    return errno != ERANGE ? lval_num(n) : lval_err("invalid number");
+}
+
+// Read the tree
+lval *lval_read(mpc_ast_t *t)
+{
+    if (strstr(t->tag, "number"))
+    {
+        return lval_read_num(t);
+    }
+
+    if (strstr(t->tag, "symbol"))
+    {
+        return lval_sym(t->contents);
+    }
+
+    // If root (>) or sexpr create an empty list
+    lval *l = NULL;
+    if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr"))
+    {
+        l = lval_sexpr();
+    }
+
+    for (int i = 0; i < t->children_num; i++)
+    {
+        if (strcmp(t->children[i]->contents, "(") == 0 ||
+            strcmp(t->children[i]->contents, ")") == 0 ||
+            strcmp(t->children[i]->tag, "regex") == 0)
+        {
+            continue;
+        }
+
+        l = lval_add(l, lval_read(t->children[i]));
+    }
+
+    return l;
+}
+
 // Delete lval from memory
 void lval_del(lval *v)
 {
@@ -75,20 +128,20 @@ void lval_print(lval v)
     switch (v.type)
     {
     case LVAL_ERR:
-        switch (v.err)
-        {
-        case LERR_BAD_OP:
-            printf("Error: Invalid operator!");
-            break;
+        // switch (v.err)
+        // {
+        // case LERR_BAD_OP:
+        //     printf("Error: Invalid operator!");
+        //     break;
 
-        case LERR_BAD_NUM:
-            printf("Error: Invalid number!");
-            break;
+        // case LERR_BAD_NUM:
+        //     printf("Error: Invalid number!");
+        //     break;
 
-        case LERR_DIV_ZERO:
-            printf("Error: Division by zero!");
-            break;
-        }
+        // case LERR_DIV_ZERO:
+        //     printf("Error: Division by zero!");
+        //     break;
+        // }
         break;
 
     case LVAL_NUM:
