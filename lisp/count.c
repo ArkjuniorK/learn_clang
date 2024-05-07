@@ -2,7 +2,7 @@
 
 int count_leaves(mpc_ast_t *t)
 {
-    if (strstr(t->tag, "number") || strstr(t->tag, "operator"))
+    if (strstr(t->tag, "number") || strstr(t->tag, "symbol"))
     {
         return 1;
     }

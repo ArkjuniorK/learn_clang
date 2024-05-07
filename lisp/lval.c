@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include "mpc.h"
 #include "lval.h"
 
@@ -51,6 +50,29 @@ lval *lval_add(lval *v, lval *x)
     return v;
 }
 
+// Pop specific lval
+lval *lval_pop(lval *v, int i)
+{
+    lval *c = v->cell[i];
+
+    // Shift the memory after the item at "i" over the top
+    memmove(&v->cell[i], &v->cell[i + 1],
+            sizeof(lval *) * (v->count - i - 1));
+
+    v->count--;
+    v->cell = realloc(v->cell, sizeof(lval *) * v->count);
+
+    return c;
+}
+
+// Take specific lval from given index and delete the rest
+lval *lval_take(lval *v, int i)
+{
+    lval *c = lval_pop(v, i);
+    lval_del(v);
+    return c;
+}
+
 // Read number type content and construct
 lval *lval_read_num(mpc_ast_t *t)
 {
@@ -73,25 +95,77 @@ lval *lval_read(mpc_ast_t *t)
     }
 
     // If root (>) or sexpr create an empty list
-    lval *l = NULL;
-    if (strcmp(t->tag, ">") == 0 || strstr(t->tag, "sexpr"))
+    lval *v = NULL;
+    if ((strcmp(t->tag, ">") == 0) || (strstr(t->tag, "sexpr")))
     {
-        l = lval_sexpr();
+        v = lval_sexpr();
     }
 
     for (int i = 0; i < t->children_num; i++)
     {
-        if (strcmp(t->children[i]->contents, "(") == 0 ||
-            strcmp(t->children[i]->contents, ")") == 0 ||
-            strcmp(t->children[i]->tag, "regex") == 0)
+        if ((strcmp(t->children[i]->contents, "(") == 0) ||
+            (strcmp(t->children[i]->contents, ")") == 0) ||
+            (strcmp(t->children[i]->tag, "regex") == 0))
         {
             continue;
         }
 
-        l = lval_add(l, lval_read(t->children[i]));
+        v = lval_add(v, lval_read(t->children[i]));
     }
 
-    return l;
+    return v;
+}
+
+// Evaluate sexpr lval
+lval *lval_eval_sexpr(lval *v)
+{
+
+    for (int i = 0; i < v->count; i++)
+    {
+        v->cell[i] = lval_eval(v->cell[i]);
+    }
+
+    for (int i = 0; i < v->count; i++)
+    {
+        if (v->cell[i]->type == LVAL_ERR)
+        {
+            return lval_take(v, i);
+        }
+    }
+
+    if (v->count == 0)
+    {
+        return v;
+    }
+
+    if (v->count == 1)
+    {
+        return lval_take(v, 0);
+    }
+
+    lval *f = lval_pop(v, 0);
+    if (f->type != LVAL_SYM)
+    {
+        lval_del(f);
+        lval_del(v);
+        return lval_err("S-Expressin did not start with Symbol");
+    }
+
+    lval *r = builtin_op(v, f->sym);
+    lval_del(f);
+
+    return r;
+}
+
+// Evaluate lval
+lval *lval_eval(lval *v)
+{
+    if (v->type == LVAL_SEXPR)
+    {
+        return lval_eval_sexpr(v);
+    }
+
+    return v;
 }
 
 // Delete lval from memory
@@ -117,42 +191,131 @@ void lval_del(lval *v)
         }
 
         free(v->cell);
+        break;
     }
 
     free(v);
 }
 
-// Print the `lval`
-void lval_print(lval v)
+// Print the exp type of lval
+void lval_expr_print(lval *v, char open, char close)
 {
-    switch (v.type)
+    putchar(open);
+
+    for (int i = 0; i < v->count; i++)
+    {
+        lval_print(v->cell[i]);
+
+        // Do not print trailing space at last element
+        if (i != (v->count - 1))
+        {
+            putchar(' ');
+        }
+    }
+
+    putchar(close);
+}
+
+// Print the `lval`
+void lval_print(lval *v)
+{
+    switch (v->type)
     {
     case LVAL_ERR:
-        // switch (v.err)
-        // {
-        // case LERR_BAD_OP:
-        //     printf("Error: Invalid operator!");
-        //     break;
-
-        // case LERR_BAD_NUM:
-        //     printf("Error: Invalid number!");
-        //     break;
-
-        // case LERR_DIV_ZERO:
-        //     printf("Error: Division by zero!");
-        //     break;
-        // }
+        printf("Error: %s", v->err);
         break;
 
     case LVAL_NUM:
-        printf("%li", v.num);
+        printf("%li", v->num);
+        break;
+
+    case LVAL_SYM:
+        printf("%s", v->sym);
+        break;
+
+    case LVAL_SEXPR:
+        lval_expr_print(v, '(', ')');
         break;
     }
 }
 
 // Print lval value by newline
-void lval_println(lval v)
+void lval_println(lval *v)
 {
     lval_print(v);
     putchar('\n');
+}
+
+lval *builtin_op(lval *a, char *op)
+{
+    for (int i = 0; i < a->count; i++)
+    {
+        if (a->cell[i]->type != LVAL_NUM)
+        {
+            lval_del(a);
+            return lval_err("Cannot operate on non-number");
+        }
+    }
+
+    lval *f = lval_pop(a, 0);
+    if ((strcmp(op, "-") == 0) && a->count == 0)
+    {
+        f->num = -f->num;
+    }
+
+    while (a->count > 0)
+    {
+        lval *n = lval_pop(a, 0);
+
+        if (strcmp(op, "+") == 0)
+        {
+            f->num += n->num;
+        }
+
+        if (strcmp(op, "-") == 0)
+        {
+            f->num -= n->num;
+        }
+
+        if (strcmp(op, "*") == 0)
+        {
+            f->num *= n->num;
+        }
+
+        if (strcmp(op, "/") == 0)
+        {
+            if (n->num == 0)
+            {
+                lval_del(f);
+                lval_del(n);
+                f = lval_err("Division by zero!");
+                break;
+            }
+
+            f->num /= n->num;
+        }
+
+        if (strcmp(op, "^") == 0)
+        {
+            f->num = pow(f->num, n->num);
+        }
+
+        if (strcmp(op, "%") == 0)
+        {
+            if (n->num == 0)
+            {
+                lval_del(f);
+                lval_del(n);
+                f = lval_err("Comparable by zero!");
+                break;
+            }
+
+            f->num = f->num % n->num;
+        }
+
+        lval_del(n);
+    }
+
+    lval_del(a);
+    return f;
 }

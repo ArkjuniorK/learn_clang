@@ -3,8 +3,6 @@
 
 #include "mpc.h"
 #include "lval.h"
-#include "count.h"
-#include "evaluate.h"
 
 // If it run on windows compile these funcions
 #ifdef _WIN32
@@ -45,23 +43,20 @@ int main(int argc, char **argv)
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Lispy = mpc_new("lispy");
 
-    char *language =
-        "                                                                                           \
-            number      : /-?[0-9]+/ ;                                                              \
-            symbol      : '+' | '-' | '*' | '/' | '^' | '%' | \"max\" | \"min\" ;                   \
-            sexpr       : '(' <sexpr>* ')' ;                                                        \
-            expr        : <number> | <symbo> | <sexpr> ;                                            \
-            lispy       : /^/ <expr>+ /$/ ;                                                         \
-        ";
-
     // Define them with the following Language
     mpca_lang(MPCA_LANG_DEFAULT,
-              language,
+              "                                                          \
+                number : /-?[0-9]+/ ;                                    \
+                symbol : '+' | '-' | '*' | '/' | '^' | '%' ;             \
+                sexpr  : '(' <expr>* ')' ;                               \
+                expr   : <number> | <symbol> | <sexpr> ;                 \
+                lispy  : /^/ <expr>* /$/ ;                               \
+                ",
               Number, Symbol, Sexpr, Expr, Lispy);
 
     // Print Version and Exit Information
     puts("Lispy Version 0.0.1");
-    puts("Press Ctrl+c to Exit!\n");
+    puts("Press ctrl+c to Exit!\n");
 
     // In a never ending loop
     while (1)
@@ -76,9 +71,9 @@ int main(int argc, char **argv)
         mpc_result_t r;
         if (mpc_parse("<stdin>", input, Lispy, &r))
         {
-            mpc_ast_t *a = r.output;
-            lval res = eval(a);
-            lval_println(res);
+            lval *v = lval_eval(lval_read(r.output));
+            lval_println(v);
+            lval_del(v);
             mpc_ast_delete(r.output);
         }
         else
@@ -92,8 +87,6 @@ int main(int argc, char **argv)
     }
 
     // Undefine and delete Parsers
-    mpc_cleanup(4, Number, Symbol, Sexpr, Expr, Lispy);
-
-    fflush(stdout);
+    mpc_cleanup(5, Number, Symbol, Sexpr, Expr, Lispy);
     return 0;
 }

@@ -23,10 +23,19 @@ enum
     LVAL_SEXPR,
 };
 
-lval lval_err(int x);
-lval lval_num(long x);
+lval *lval_num(long n);
+lval *lval_err(char *e);
+lval *lval_sym(char *s);
+lval *lval_sexpr();
 
-void lval_print(lval v);
-void lval_println(lval v);
+lval *lval_eval(lval *v);
+lval *lval_read(mpc_ast_t *t);
+
+lval *builtin_op(lval *a, char *op);
+
+void lval_del(lval *v);
+
+void lval_print(lval *v);
+void lval_println(lval *v);
 
 #endif
