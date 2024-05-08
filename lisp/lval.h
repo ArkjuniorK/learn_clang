@@ -21,17 +21,19 @@ enum
     LVAL_NUM,
     LVAL_SYM,
     LVAL_SEXPR,
+    LVAL_QEXPR,
 };
 
 lval *lval_num(long n);
 lval *lval_err(char *e);
 lval *lval_sym(char *s);
 lval *lval_sexpr();
+lval *lval_qexpr();
 
 lval *lval_eval(lval *v);
 lval *lval_read(mpc_ast_t *t);
 
-lval *builtin_op(lval *a, char *op);
+lval *builtin(lval *a, char *fn);
 
 void lval_del(lval *v);
 
