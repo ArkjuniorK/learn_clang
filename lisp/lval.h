@@ -14,6 +14,7 @@ enum
     LVAL_FUNC,
     LVAL_SEXPR,
     LVAL_QEXPR,
+    LVAL_NONE,
 };
 
 typedef lval *(*lbuiltin)(lenv *, lval *);
