@@ -1,3 +1,5 @@
+#include "mpc.h"
+
 #ifndef lval_h
 #define lval_h
 
@@ -22,12 +24,19 @@ typedef lval *(*lbuiltin)(lenv *, lval *);
 struct lval
 {
     int type;
-    long num;
 
+    // Basic
+    long num;
     char *err;
     char *sym;
-    lbuiltin func;
 
+    // Function
+    lenv *env;
+    lval *body;
+    lval *formals;
+    lbuiltin builtin;
+
+    // Expression
     int count;
     struct lval **cell;
 };
@@ -37,11 +46,14 @@ struct lenv
     int count;
     char **syms;
     lval **vals;
+    lenv *par;
 };
 
 lenv *lenv_new(void);
 lval *lenv_get(lenv *e, lval *k);
+lenv *lenv_copy(lenv *e);
 void lenv_put(lenv *e, lval *k, lval *v);
+void lenv_def(lenv *e, lval *k, lval *v);
 void lenv_del(lenv *e);
 void lenv_add_builtins(lenv *e);
 
@@ -57,5 +69,8 @@ lval *lval_read(mpc_ast_t *t);
 void lval_del(lval *v);
 void lval_print(lval *v);
 void lval_println(lval *v);
+
+lval *builtin_eval(lenv *e, lval *a);
+lval *builtin_list(lenv *e, lval *a);
 
 #endif

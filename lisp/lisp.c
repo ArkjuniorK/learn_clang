@@ -34,6 +34,12 @@ void add_history(char *unused) {}
 // it should be better than removing it.
 // #include <editline/history.h>
 
+/**
+ * ---------------------------------------
+ * Main function to run the entire program
+ * ---------------------------------------
+ */
+
 int main(int argc, char **argv)
 {
     // Create some Parsers
